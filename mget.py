@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 class Globals:
     def __init__(self):
         self.contained = {}
-    
+
     def put(self,name,value):
         self.contained[name] = value
 
@@ -77,7 +77,7 @@ def download(url, gbl, path = os.getcwd(), name = None, threads = 0, chunk_size 
                 m = int(m)
                 s = int(s)
                 h = int(h)
-                print(f'Downloaded in {h:d}:{m:02d}:{s:02d}') 
+                print(f'Downloaded in {h:d}:{m:02d}:{s:02d}')
                 print("Combining files..")
                 files = glob.glob("*.mget_*")
                 files.sort()
@@ -88,8 +88,34 @@ def download(url, gbl, path = os.getcwd(), name = None, threads = 0, chunk_size 
                         with open(i,"rb") as x:
                             f.write(x.read())
                     os.remove(i)
-                print("Completed")    
-            
+                print("Completed")
+        else:
+            resp = requests.get(url,stream = True)
+            with open(path+"/"+name, 'wb') as f:
+                cur = 0
+                startTime = time.time()
+                lastTime = time.time()
+                lastSize = 0
+                lastSpeed = ""
+                for chunk in resp.iter_content(chunk_size=chunk_size):
+                    f.write(chunk)
+                    cur += chunk_size
+                    if time.time()-lastTime >= 1:
+                        speed = dlSpeed(cur-lastSize)
+                        lastSize = cur
+                        lastTime = time.time()
+                        lastSpeed = speed
+                        if length < 1:
+                            print("?% @ "+speed+"/s        ",end="\r")
+                        else:
+                            print(str(int((cur/length)*100))+"% @ "+speed+"/s     ",end="\r")
+            m, s = divmod(time.time() - startTime, 60)
+            h, m = divmod(m, 60)
+            m = int(m)
+            s = int(s)
+            h = int(h)
+            print(f'Downloaded in {h:d}:{m:02d}:{s:02d}')
+
 def dlThread(url,path,name,chunk_size,indx,splits,gbl):
     resp = requests.get(url,stream = True,headers={"Range":"bytes=%d-%d"%(splits[0],splits[1])})
     with open(path+"/"+name+".mget_"+str(indx), 'wb') as f:
